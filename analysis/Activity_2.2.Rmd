@@ -1,0 +1,402 @@
+```{r eval=TRUE, echo=FALSE, message=FALSE, purl=FALSE}
+options(width = 90)
+Sys.setenv(TZ = "UTC")
+library(datadr)
+library(trelliscope)
+library(cyberTools)
+library(Rhipe)
+rhinit()
+#for bigdatann
+rhoptions(runner = "/share/apps/R/3.0.2/bin/R CMD /share/apps/R/3.0.2/lib64/R/library/Rhipe/bin/RhipeMapReduce --slave --silent --vanilla")
+setwd("~/bootcamp")
+hdfs.setwd("/user/d3l348/bootcamp")
+```
+
+
+### Activity 2.2: Using Tessera with Hadoop to Analyze Large Data ###
+
+```{r Activity2.2, eval=FALSE, echo=FALSE, purl=TRUE}
+###########################################################
+### Activity 2.2
+### Using DataDR and Trelliscope with Hadoop for 
+### distributed computing.
+###########################################################
+```
+
+#### Session Initialization
+
+```{r Activity2.2.1, eval=FALSE, echo=TRUE, message=FALSE}
+# load required packages and initialize Rhipe
+library(datadr)
+library(Rhipe)
+library(cyberTools)
+rhinit()
+
+# set time zone to "UTC" for use with dates in the data
+Sys.setenv(TZ = "UTC")
+
+# set working directories on local machine 
+setwd("~")
+
+# set working directory in HDFS
+hdfs.setwd(""Sys.getenv("HDFS_USER_VAST")"")
+```
+
+```{r Activity2.2.2, eval=TRUE, echo=TRUE, purl=TRUE}
+# make sure raw text data has been copied to HDFS
+rhls("raw/nf")
+```
+
+#### Read NetFlow csv Data to R Objects ###
+
+One of the more tedious parts of data analaysis can be getting the data 
+into the proper format for analysis.  `datadr` stives to provide as much 
+functionality to make this process as painless as possible, but there 
+will always be special situations that require unique solutions.
+
+For analysis in `datadr`, we want to take the raw data and store it as 
+native R objects.  This provides a great degree of flexibility in what 
+type of data structures we can use, such as non-tabular data or special 
+classes of R objects like time series or spatial objects.
+
+Here, all of our input data is text.  Text files are used quite often 
+for storing and sharing big data.  For example, often 
+[Hive](https://hive.apache.org) tables are stored as text files. `datadr` 
+provides some helpful functions that make it easy to deal 
+with reading in text data and storing it as R objects..  
+
+In this activity we will go through how to read the NetFlow data from 
+text.  These examples read the data using a simple function 
+`drRead.csv()` which has a similar interface to R's `read.csv()` function.
+
+We saw from before that the NetFlow data is located on HDFS at 
+`raw/nf/nf-week2.csv`.  If we were to look at a sample of the NetFlow 
+data we would see that it has a few date/time related columns. R will 
+read those in as character and/or numeric, and we will want to 
+convert them to R date/time objects.
+![NetFlow Data](figures/NetFlow_data.png)
+
+We will make a date transformation function, which we will pass to the 
+`drRead.csv()` function so that it will be applied to each row of data 
+as it is read. 
+
+```{r Activity2.2.3a, eval=TRUE, echo=TRUE}
+# make a date parsing function to use during data ingest
+nfTransform <- function(x) {
+   x$date <- as.POSIXct(as.numeric(as.character(x$TimeSeconds)), 
+      origin = "1970-01-01", tz = "UTC")
+   x[,setdiff(names(x), c("TimeSeconds", "parsedDate"))]
+}
+```
+
+#### HDFS connections
+
+We are reading text data from HDFS and will be storing the data we read 
+to HDFS.  When working with HDFS in `datadr`, we create *HDFS connections*.  An 
+HDFS connection is simply defined by the path where we would like the 
+data to be stored on HDFS and the file type (such as "text").  
+
+For the input connection, we want to point to `raw/nf`, and make sure it 
+is known that it is "text" data:
+
+```{r Activity2.2.3b, eval=TRUE, echo=TRUE}
+# initiate a connection to existing csv text file on HDFS
+csvConn <- hdfsConn("raw/nf", type = "text")
+```
+
+The output connection should be an empty directory, and can be a 
+nonexistent directory.  Here, we would like to store our parsed NetFlow 
+data in `nfRaw`.  We initialize this connection with a call to `hdfsConn()`:
+
+```{r Activity2.2.3c, eval=TRUE, results='hide', echo=TRUE, message=FALSE}
+# initiate a new connection where parsed NetFlow data will be stored
+nfConn <- hdfsConn("nfRaw", autoYes=TRUE) 
+```
+
+The `autoYes` parameter tells the function to respond 'Yes' to any question 
+about creating the directory if it does not exist.  `nfConn` is now simply 
+an R object that points to a directory on HDFS.
+
+We can now use these objects in our csv reader.
+
+#### Reading in the data
+
+There is a handy function in `datadr` that is the analog to `read.csv`, 
+called `drRead.csv`, which reads the data in in blocks.  It has the same 
+calling interface as R's `read.csv` with additional arguments to specify 
+where to store the output, how many rows to put in each block, and an 
+optional transformation function to apply to each block prior to storing 
+it.
+
+We will read in the NetFlow csv file using the default number of rows per 
+block (`50000`), apply our `nfTransform` function that adds the `time` 
+variable, and save the output to our `nfConn` local disk connection:
+  
+```{r Activity2.2.4, eval=FALSE, echo=TRUE, results='hide', message=FALSE}
+# read in NetFlow data
+nfRaw <- drRead.csv(csvConn, output = nfConn, postTransFn = nfTransform)
+```
+
+At this point you will see a series of status updates from Hadoop, while
+the `drRead.csv` command is running. In particular, pay attention to the 
+numbers of map and reduce jobs moving from the 'pending' to the 'running' 
+to the 'complete' columns. When this is complete, let's take a look at 
+`nfRaw` to see what the object looks like:
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, purl=FALSE}
+# since we will have already updated the attributes, set them back to NA for a minute
+# (doing this instead of caching...)
+{
+nfRaw <- ddf(hdfsConn("nfRaw"))
+tmpNfAttr <- getAttributes(nfRaw, c("keys", "totObjectSize", 
+   "splitSizeDistn", "bsvInfo", "nRow", "splitRowDistn", "summary"))
+nfRaw <- setAttributes(nfRaw, list(keys = NA, totObjectSize = NA, 
+   splitSizeDistn = NA, bsvInfo = NA, nRow = NA, splitRowDistn = NA, summary = NA))
+}
+```
+
+```{r Activity2.2.5, eval=TRUE, echo=TRUE}
+# look at the nfRaw object
+nfRaw
+```
+
+`nfRaw` is a *distributed data frame* (ddf), and we see several aspects 
+about the data printed.  For example, we see that there are 481 subsets 
+and that the size of the data on HDFS is `totStorageSize` = 
+`r round(getAttribute(nfRaw, "totStorageSize") / 1024^3, 2)` Mb.  The 
+other attributes will be updated in a moment.
+
+The `nfRaw` object itself is simply a special R object that contains 
+metadata and pointers to the actual data stored on disk.  For more 
+background on ddf and related objects, see 
+[here](http://hafen.github.io/datadr/index.html#distributed-data-objects) 
+and [here](http://hafen.github.io/datadr/index.html#distributed-data-frames), 
+and particularly for ddf objects on local disk, see 
+[here](http://hafen.github.io/datadr/index.html#medium-disk--multicore).
+
+Earlier we saw in the printout of `nfRaw` that it has many attibutes that 
+have not yet been determined.  We can fix this by calling `updateAttributes()`:
+
+```{r Activity2.2.6a, eval=FALSE, echo=TRUE}
+# get missing attributes
+nfRaw <- updateAttributes(nfRaw)
+```
+
+In any subsequent R session, we can "reload" this data object, along with 
+its metadata,
+with the following command:
+
+```{r Activity2.2.6b, eval=TRUE, echo=TRUE, results='hide', message=FALSE, purl=TRUE}
+# reload "nfRaw" by loading the connection as a ddf
+nfRaw <- ddf(hdfsConn("nfRaw"))
+```
+
+Now we can see more meaningful information about our data:
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, purl=FALSE}
+# set attributes back as if we updated nfRaw
+nfRaw <- setAttributes(nfRaw, c(tmpNfAttr$ddo, tmpNfAttr$ddf))
+```
+
+```{r Activity2.2.7, eval=TRUE, echo=TRUE}
+# look at the updated nfRaw object
+nfRaw
+```
+
+We now see that there are about 23 million rows of data, and we are supplied, 
+among other things, with summary statistics for the variables in the ddf.
+
+#### DDF attributes
+
+Since `nfRaw` is a distributed data frame, we can look at various aspects of 
+the data frame through familiar R methods.
+
+We can get number of rows:
+
+```{r Activity2.2.8a, eval=FALSE, echo=TRUE}
+# get total number of rows
+nrow(nfRaw)
+```
+```
+[1] 23258685
+```
+
+We can see variable names:
+
+```{r Activity2.2.8b, eval=TRUE, echo=TRUE}
+# see what variables are available
+names(nfRaw)
+```
+
+We can grab the first subset and look at its structure:
+
+```{r Activity2.2.9, eval=TRUE, echo=TRUE}
+# look at the structure of the first key-value pair
+str(nfRaw[[1]])
+```
+
+We can view summaries of the variables in the distributed data frame:
+
+```{r Activity2.2.10, eval=TRUE, echo=TRUE}
+# look at summaries (computed from updateAttributes)
+summary(nfRaw)
+```
+
+There are several insights we can get from the data by simply scanning 
+the summary output printed above.  For example, the variable 
+`ipLayerProtocolCode` tells us that the vast majority of the connections 
+monitored are [TCP][TCP-wik] connections, while [UDP][UDP-wik] connections 
+make up a little less than 1% of the traffic.  Also, all other protocols 
+are rolled up into an "other" category.  There are 1390 `firstSeenSrcIp` 
+values and 1277 `firstSeenDestIp` values. Also, the top destination IP 
+had nearly twice as many sessions as the next most frequent. Recall that 
+all variables are described [here](docs/data/NetFlow_NetworkHealth.pdf)).
+
+#### Aggregate session counts per minute for each destination IP
+
+The `drAggregate` function counts frequencies of any combination of variables 
+specified. This function can be used to get an idea of meaningful or interesting 
+data divisions for further analysis. `drAggregate` is similar to the familiar 
+`xtabs` function available in base R.
+
+We would like to look at the time series of session counts per minute for each 
+destination IP. We can apply the `drAggregate` function to `nfRaw` to 
+accomplish this. Such tabulation is an example of a "division-agnostic" method 
+- a method we would like to run over the entire data set regardless of how 
+it is divided.
+
+As with `xtabs()`, at a minimum, we provide `drAggregate()` a formula 
+specifying the tabulation and the input data (must be a ddf or coercible 
+to one).  We also subset the data to the four big IP addresses prior to 
+performing the tabulation and create a variable that will help us bin by 
+minute through the use of the `preTransFn` argument.
+
+```{r eval=TRUE, echo=FALSE}
+# load cached version of bigTimeAgg
+load("data/artifacts/bigTimeAgg.Rdata")
+```
+
+```{r Activity2.2.11a, eval=FALSE, echo=TRUE, message=FALSE}
+# count sessions per minute per destination IP
+bigTimeAgg <- drAggregate(~ timeMinute + firstSeenDestIp, 
+                 data = nfRaw, 
+                 preTransFn = function(x) {
+                     x$timeMinute <- as.POSIXct(trunc(x$date, 0, units = "mins"))
+                     x
+                 })
+```
+
+Now we sort the data in decreasing order of frequency and look at the first 
+few rows:  
+  
+```{r Activity2.2.11-12, eval=TRUE, echo=TRUE}
+# sort by number of sessions
+bigTimeAgg <- bigTimeAgg[order(bigTimeAgg$Freq, decreasing=TRUE),]
+
+# look at the first few rows
+head(bigTimeAgg)       
+```
+
+```{r saveData1, eval=TRUE, echo=FALSE, message=FALSE}
+# create "data/artifacts" to store results
+dir.create("data/artifacts", recursive = TRUE, showWarnings=FALSE)
+
+# save aggregation to disk
+save(bigTimeAgg, file = "data/artifacts/bigTimeAgg.Rdata")
+```
+
+One obvious thing to do would be to plot time series by host IP. First we have
+to convert the timeMinute column from character to a date/time object. We will 
+plot four IPs that we know from information distributed with the data are
+HTTP servers.
+  
+```{r Activity2.2.13, eval=TRUE, echo=TRUE, fig.width=9, fig.height=7}
+# convert timeMinute column to a time variable
+bigTimeAgg$timeMinute <- as.POSIXct(bigTimeAgg$timeMinute, tz = "UTC")
+
+# a few http servers
+httpIPs <- c("172.20.0.15", "172.20.0.4", "172.10.0.4", "172.30.0.4")
+
+# plot the time series of minute-counts by destination IP
+xyplot(Freq ~ timeMinute | firstSeenDestIp, 
+        data = bigTimeAgg[bigTimeAgg$firstSeenDestIp %in% httpIPs,], 
+        layout = c(1, 4), as.table = TRUE, 
+        strip = FALSE, strip.left = TRUE, 
+        between = list(y = 0.25),
+        type = c("p", "g"))
+```
+
+It is clear that the majority of this traffic for each host occurs in two 
+bursts, which occur at the same time for each host.  This looks like a denial of 
+service attack.  We will look at this more in more detail in the next section.
+
+
+#### Calculate session duration quantiles  
+
+Next we will explore the `drQuantile` function. `drQuantile` is another `datadr`
+function that is division-agnostic, it is the analog of the `quantile` function
+in R's base package. It is useful to look at data quantiles to identify 
+outliers. 
+
+Let's use `drQuantile` to calculate the quantiles of the session duration,
+by source IP type (e.g. HTTP, Workstation, etc). (We will use the convenience 
+function `mergeHostList` in the `cyberTools` package. This function maps the
+internal IP assignments of this dataset to their assigned categories.)
+
+```{r eval=FALSE, echo=FALSE}
+# load cached version of dsqSrcType
+load("data/artifacts/quantSrcType.Rdata")
+```
+
+```{r Activity2.2.14, eval=TRUE, echo=TRUE, results='hide', message=FALSE}
+# compute the distribution of connection duration by source host type
+dsqSrcType <- drQuantile(
+   nfRaw, var = "durationSeconds", by = "type",
+   preTransFn = function(x) {
+      suppressMessages(library(cyberTools))
+      mergeHostList(x[,c("firstSeenSrcIp", 
+         "durationSeconds")], "firstSeenSrcIp")
+   }
+)
+```
+
+```{r saveData2, eval=TRUE, echo=FALSE, message=FALSE}
+# save quantiles to disk
+save(dsqSrcType, file = "data/artifacts/quantSrcType.Rdata")
+```
+
+Look at the result:
+
+```{r Activity2.2.15, eval=TRUE, echo=TRUE}
+# look at the drQuantile output
+head(dsqSrcType)
+```
+
+Now we will plot the data. We log-transform the y axis so that differences 
+in the smaller values are not completely obscured.
+
+```{r Activity2.2.16, eval=TRUE, echo=TRUE, fig.width=10, fig.height=7}
+# plot the distribution of connection duration by source host type
+xyplot(log2(q + 1) ~ fval * 100 | group, 
+   data = dsqSrcType, type = "p",
+   xlab = "Percentile",
+   ylab = "log2(duration + 1)",
+   panel = function(x, y, ...) {
+      panel.abline(v = seq(0, 100, by = 10), col = "#e6e6e6")
+      panel.xyplot(x, y, ...)
+      panel.abline(h = log2(1801), lty = 2)
+   },
+   layout = c(7, 1)
+)
+```
+
+We can see from this plot that while the durations of the sessions initiated 
+by external IPs have a lot of variability, the sessions initiated by other 
+types, like Domain Controllers for example, tend to be consistently short with
+a few notable outliers. Consultation with a network traffic expert would be 
+necessary at this point to determine if this behavior is potentially 
+concerning, and if it were, tools like Trelliscope could be used to dig into
+the data and identify the source of the outliers. In the next session we will
+use Trelliscope to investigate the NetFlow data, however not the duration
+field.
+

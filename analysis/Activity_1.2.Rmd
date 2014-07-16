@@ -1,0 +1,145 @@
+# Intro to R "Big Data" Bootcamp #
+## Activity 1: Introduction to R ##
+
+### Activity 1.2: Getting Started ###
+========================================================
+#### Activity 1.2.1: Help commands
+When you don't know exactly what you're looking for,
+search for a topic.  There are two ways to do this:
+
+```{r eval=FALSE}
+help.search("graphics")
+??graphics
+```
+
+ When you know the name of the R function, e.g. the function
+ print(), there are two ways to do this:
+
+```{r eval=FALSE}
+help(print)
+?print
+```
+
+Sometimes you just need a reminder about the arguments (the inputs) of a function.  The args() function can help in
+this situation.  Here are the arguments for the rnorm()
+function, which generates normal random variates
+
+```{r}
+args(rnorm)
+```
+Examples are often included in the documentation of functions at the bottom of the documentation.  Look at:
+
+```{r eval=FALSE}
+?seq
+```
+ You can execute the example code for a function all at once
+ using the example() function:
+
+```{r}
+example(seq)
+```
+
+#### Activity 1.2.2:Demos
+
+
+ Some R packages include demonstrations you can run to learn
+ about their capability.  Be sure to hit "Enter" to
+ cycle through the components of each demo
+
+ Here's one from the 'graphics' package, which gives a nice
+ demonstration of the breadth of graphical capability in R
+
+```{r}
+demo("graphics")
+```
+ And here's one about generalized linear models (glm)
+
+```{r}
+demo(lm.glm)
+```
+
+#### Activity 1.2.3: R as a calculator
+
+
+ Addition
+
+```{r}
+7 + 3
+```
+Subtraction
+
+```{r}
+7 - 3
+```
+Multiplication
+
+```{r}
+7 * 3
+```
+Division
+
+```{r}
+7 / 3
+```
+Integer division
+
+```{r}
+7 %/% 3
+```
+Division remainder (the modulo)
+
+```{r}
+7 %% 3
+```
+exponentiation
+
+```{r}
+exp(7)
+```
+Natural logarithm
+
+```{r}
+log(7)
+```
+Base 10 log
+
+```{r}
+log10(1000)
+```
+Examples of common mathematical functions and constants
+
+```{r}
+sqrt(16)
+cos(pi)
+```
+Powers:  2 to the 5th
+
+```{r}
+2^5
+```
+Large and small numbers
+
+```{r}
+1.7e+05
+1.7e-03
+```
+And there are numerous statistical functions.  For example:
+The probability a standard normal random variable takes
+a value of 1.96 or lower:
+
+```{r}
+pnorm(1.96)
+```
+And the probability of 4 heads in 12 fair coin flips
+
+```{r}
+dbinom(4, 12, 0.5)
+```
+And, best of all, it handles division by 0 gracefully :)
+
+```{r}
+1 / 0
+```
+
+
+
