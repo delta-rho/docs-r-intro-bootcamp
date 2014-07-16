@@ -1,0 +1,306 @@
+## Activity 2: Demonstration of Tessera Tools with Data ##
+
+### Activity 2.1: DataDR and Trelliscope example with Census Data ###
+
+#### Introduction to the Census Data and Distributed Data Frames
+
+This example uses a dataset from the 1994 U.S. census, available at 
+http://archive.ics.uci.edu/ml/datasets/Adult. This is a relatively small
+dataset, which can be loaded into memory; we use it to demonstrate DataDR
+and Trelliscope because its size makes it easy to see the relationship
+between the analysis steps and the visualizations. This dataset (`adult`) is
+distributed with the `datadr` library, once the library is loaded, the
+data frame is available.
+
+We start by loading the datadr and trelliscope libraries, and looking at
+the `adult` data frame. The data has a mix of categorical and numeric variables, including
+age, race, gender, education level, income bin (<=$50K, >$50K), 
+hours per week worked, and job class (e.g. private, government, 
+self-employed, etc) among others.
+
+```{r Activity2.1, eval=FALSE, echo=FALSE, purl=TRUE}
+###########################################################
+### Activity 2.1
+### DataDR and Trelliscope example with Census Data
+###########################################################
+```
+
+```{r Activity2.1.1, eval=TRUE, echo=TRUE, message=FALSE}
+library(datadr)
+library(trelliscope)
+
+# look at the dataset
+str(adult)
+```
+
+The first step is to transform `adult` into a distributed data frame (DDF).
+A DDF is one of the main data containing classes in `datadr`. A DDF can 
+represent data in memory, on local disk, or on a Hadoop Distributed File
+System (HDFS), so it can be used for data from the very small to the very large.
+One advantage of using `datadr` is that the same analysis algorithms can 
+be used on all types of DDFs without rewriting code. 
+
+```{r Activity2.1.2, eval=TRUE, echo=TRUE, message=FALSE}
+# express data as a local "distributed data frame"
+adultDdf <- ddf(adult, update=TRUE)
+
+adultDdf
+```
+
+As we see, this dataset has size 2.12 MB and has `r nrow(adultDdf)` observations.
+A good place to start in an exploratory analysis is to look at summary statistics. The `summary()` method provides a nice overview of the variables in our distributed data frame.  For categorical variables, it provides a frequency table, and for numeric variables, it provides summary statistics such as moments (mean, standard deviation, etc.), range, etc.
+
+```{r Activity2.1.3, eval=TRUE, echo=TRUE, message=FALSE}
+# look at data summary statistics
+summary(adultDdf)
+```
+
+#### Dividing and Recombining
+
+A typical analysis path is to divide data based on some variable in the dataset 
+and apply some analysis to each subset of the data. We will divide based on
+the `education` field. Use the `getKeys` method to see the keys associated
+with a data. Then use one key to see the data rows associated with that value
+of `education`.
+
+```{r Activity2.1.4-5, eval=TRUE, echo=TRUE, message=FALSE}
+# divide the ddf by the variable "education"
+byEducation <- divide(adultDdf, by = "education", update=TRUE)
+
+# look at division keys
+getKeys(byEducation)
+
+# look at subsets of the ddf
+head(byEducation[["education=Bachelors"]][[2]])
+
+```
+
+What if we wanted to compute summary statistics on each division of the data? For 
+example, we could calculate the mean and standard deviation of the number of 
+hours per week worked for each education level. The `recombine` method will apply
+a function to each data division, then combine the function outputs into a single
+data frame.
+
+```{r Activity2.1.6, eval=TRUE, echo=TRUE, message=FALSE}
+# compute mean and standard dev of hoursperweek for each subset and recombine into one table
+edMeanAndVar <- recombine(byEducation,
+   apply = function(x) {
+      list(
+         mean=mean(x$age, na.rm=TRUE), 
+         stdev=sqrt(var(x$age, na.rm=TRUE))
+      )
+   },
+   combine = combRbind()
+)
+
+# look at results 
+edMeanAndVar
+
+```
+
+#### Trelliscope Displays
+
+For this activity, we will make a couple of simple Trelliscope displays. The
+Trelliscope documentation at <http://tesseradata.org/trelliscope/> 
+has many more details than what is discussed here.
+
+Trelliscope provides a visual recombination approach to D&R.  In Trelliscope, 
+we specify a function to be applied to each subset that produces a plot. Each 
+plot is called a "panel".  The collection of panels for given dataset is 
+called a "display".  A collection of displays is called a "visualization 
+database" (VDB).
+
+Trelliscope provides an interactive viewer that allows the user to specify how 
+to sort, filter, and arrange the panels in a display to view them in a 
+meaningful way.
+
+We start by creating a different division on the data, using the `workclass` variable.
+
+```{r Activity2.1.7, eval=TRUE, echo=TRUE, message=FALSE}
+# divide by work class
+byWorkClass <- divide(adultDdf, by="workclass")
+
+getKeys(byWorkClass)
+```
+
+We will create Trelliscope display to explore the data divided by `workclass`. 
+First, we create a function that makes a plot out of one data division. It's good
+to test this function on one division. 
+
+```{r Activity2.1.8, eval=TRUE, echo=TRUE, message=FALSE}
+# panel function: education vs hours per week, conditioned on income category
+pf1 <- function(x)
+   xyplot(hoursperweek ~ educationnum | income, 
+      data = x,
+      xlab="Years of Education",
+      ylab="Hours per Week"
+   )
+# test it on one data division
+pf1(byWorkClass[["workclass=Federal-gov"]][[2]])
+```
+
+We will have a set of these plots, one corresponding to each value of `workclass`.
+To help interact with all the possible panels we can specify metrics to computed 
+for each subset, which are called ‘cognostics’. Cognostics specify sorting and 
+filtering of the plots based on the metrics chosen. For this data, our 
+cognostics include summary statistics of the education level and hours per week
+(mean, max, min).
+
+
+```{r Activity2.1.9, eval=TRUE, echo=TRUE, message=FALSE}
+# cognostics function
+cf <- function(x) {
+   list(
+      fracAbove50K = cog(mean(x$incomebin), desc = "fraction above $50K income"),
+      minEducation = cog(min(x$educationnum), desc = "min number of education years"),
+      meanEducation = cog(mean(x$educationnum), desc = "mean number of education years"),
+      maxEducation = cog(max(x$educationnum), desc = "max number of education years"),
+      minnHoursPerWeek = cog(min(x$hoursperweek), desc="min hours per week worked"),
+      meanHoursPerWeek = cog(mean(x$hoursperweek), desc="mean hours per week worked"),
+      maxHoursPerWeek = cog(max(x$hoursperweek), desc="max hours per week worked")
+   )
+}
+```
+
+As with the panel function, it's a good idea to test the cognostics function
+on one data division.
+
+```{r Activity2.1.10, eval=TRUE, echo=TRUE, message=FALSE}
+cf(byWorkClass[[1]][[2]])
+```
+
+Now that we're satisfied with our panel and cognostics functions, we put 
+them together to create a Trelliscope display. The `vdbConn` command creates 
+a visualization database (VDB) directory where plots and metadata will be 
+stored when they are created by the `makeDisplay` function.
+
+```{r Activity2.1.11, eval=TRUE, echo=TRUE, message=FALSE}
+# create visualization database
+vdbConn("vdb_census", autoYes = TRUE)
+   
+# create display with this panel and cognostics functions
+makeDisplay(byWorkClass,
+   name = "hours_and_education_by_workclass",
+   desc = "hours and education by workclass",
+   panelFn = pf1, cogFn = cf,
+   width = 400, height = 400
+)
+```
+
+The `view` command launches the Trelliscope viewer in a browser. 
+
+```{r Activity2.1.11b, eval=FALSE, echo=TRUE, message=FALSE}
+# view the display
+view()
+```
+
+When the Trelliscope viewer appears, it displays a list of displays to 
+choose from--at the moment it shows only one option which is the display 
+we just created. 
+
+![Trelliscope Fig 1](figures/trelliscope_1_1.png)
+
+When you select the display, the first, randomly selected plot is shown. Notice
+the left and right arrows at the top that allow you to page through the
+plots. There is one plot panel for each data division--in this case,
+for each work class.
+
+![Trelliscope Fig 2](figures/trelliscope_1_2.png)
+
+We will use the Visible Cognostics screen to choose what information is displayed
+below each plot. The variable used to define the division is chosen by
+default (`workclass`); let's also select `fracAbove50K`.
+
+![Trelliscope Fig 3](figures/trelliscope_1_3.png)
+
+Next use the Panel Layout screen to display multiple panels at a time.
+
+![Trelliscope Fig 4](figures/trelliscope_1_4.png)
+
+Now all 9 panels (for the 9 work classes) are displayed at once.
+
+![Trelliscope Fig 5](figures/trelliscope_1_5.png)
+
+In the Table Sort/Filter Screen, we can sort and filter the plots based
+on the cognostics defined above. Click the small up arrow next to the
+`fracAbove50K` column header; this sorts the rows into decreasing
+order according to that statistic. 
+
+![Trelliscope Fig 6](figures/trelliscope_1_6.png)
+
+Hit Apply to return to the plots
+and you will see that they have been re-ordered.
+
+![Trelliscope Fig 7](figures/trelliscope_1_7.png)
+
+We will look at additional capabilities of the Trelliscope viewer in 
+the next example. Close the Trelliscope viewer and return to the R 
+command line. Type `Esc` or `Ctrl-C` to stop the Trelliscope viewer. 
+
+Next we will create a second type of panel function for a different 
+type of plot. 
+
+```{r Activity2.1.12a, eval=TRUE, echo=TRUE, message=FALSE}
+pf2 <- function(x)
+   boxplot(educationnum ~ income, data = x,
+      xlab="Income", ylab="Education")
+pf2(byWorkClass[[1]][[2]])
+```
+
+We pass this new panel function to the `makeDisplay` function
+as before, and use the same cognostics function as previously.
+
+```{r Activity2.1.12b, eval=FALSE, echo=TRUE, message=FALSE, results='hide'}
+# a second type of plot on the same data
+makeDisplay(byWorkClass,
+   name = "education_boxplot_by_workclass",
+   desc = "education boxplot by workclass",
+   panelFn = pf2, cogFn = cf,
+   width = 400, height = 400
+)
+```
+
+When the Trelliscope viewer is launched you will see that both the first set
+of plots and the most recent set are available to view. This is because
+the Trelliscope displays are persistent: they are stored in the vdbConn
+specified above.  You can keep adding more types of plots and as long as they
+are given unique names in the `makeDisplay` command they will all be
+available to view.
+
+You could also come back in future sessions of R and specify the same directory
+in a `vdbConn` command and see the Trelliscope displays created today, as long
+as you do not delete that directory.
+
+```{r Activity2.1.11c, eval=FALSE, echo=TRUE, message=FALSE}
+# launch viewer
+view(port=myport)
+```
+![Trelliscope Fig 8](figures/trelliscope_1_8.png)
+
+Select the new display (labeled education_boxplot_by_workclass) and you will
+see a single boxplot panel.
+
+![Trelliscope Fig 9](figures/trelliscope_1_9.png)
+
+In the visible cognostics screen, we will select `fracAbove50K` and 
+`meanHoursPerWeek`. Click the Apply button.
+
+![Trelliscope Fig 10](figures/trelliscope_1_10.png)
+
+In the Univariate Filter screen, we can view quantile plots of the
+cognostic statistics, and select outliers to filter. If we select
+`fracAbove50K` on the left, and draw a box to select the two points 
+on the upper right of the plot, this will filter the panels so that
+only the panels corresponding to those two values of `fracAbove50K` 
+are displayed. Click the Apply button.
+
+![Trelliscope Fig 11](figures/trelliscope_1_11.png)
+
+After using the Panel Layout screen to display two panels at a
+time, we can see the two sets of boxplots corresponding to the two
+work classes with the highest fraction of incomes above $50,000.
+
+![Trelliscope Fig 12](figures/trelliscope_1_12.png)
+
+As previously noted, after finishing looking at the Trelliscope viewer,
+type `Esc` or `Ctrl-C` at the R command line.
