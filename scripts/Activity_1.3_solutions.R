@@ -91,6 +91,42 @@ sum(above_2 & below_8)
 # End Solution
 
 ################################################################
+## Exercise 1.3.5,  Named vectors
+################################################################
+
+# 1) Create a named character vector of length 3
+#
+# 2) Create a second named logical vector of length 3
+#
+# 3) Switch the names of the 2 vectors
+
+# Solution
+
+# A named character vector
+xChar <- c(this = "one", that = "too", these = "many")
+xChar
+
+# A named logical vector
+xLogical <- c(happy = TRUE, sad = FALSE, angry = TRUE)
+xLogical
+
+# Switch the names.  Begin by storing the names of xChar in a
+# character vector
+xCharNames <- names(xChar)
+
+# Assign the names of xLogical to xChar
+names(xChar) <- names(xLogical)
+
+# Assign the names of xChar to xLogical
+names(xLogical) <- xCharNames
+
+# Look at the results
+xChar
+xLogical
+
+# End Solution
+
+################################################################
 ## Exercise 1.3.6,  Data frames
 ################################################################
 
@@ -160,6 +196,42 @@ X[allCrit,]
 # End Solution
 
 ################################################################
+## Exercise 1.3.7,  Matrices
+################################################################
+
+# 1) Create a 2 x 2 matrix with the following elements:
+#    (2, 4, 7, 1), loaded rowwise.
+#
+# 2) Calculate the trace (the sum of the diagonal elements)
+#    of the matrix.  Hint: use the sum() function
+#
+# 3) Create a column vector of length 2 with the elements
+#    (3, 5)
+#
+# 4) Using matrix multiplication, and your results from (1)
+#    and (3), find the product of the transpose of the column
+#    vector, the matrix, and the column vector.  Display the
+#    result should as a single number (not a 1 x 1 matrix).
+
+# Solution
+
+# Create the matrix
+m <- matrix(c(2, 4, 7, 1), nrow = 2, byrow = TRUE)
+m
+
+# Calculate the trace
+sum(diag(m))
+
+# Create the column vector
+v <- c(3, 5)
+v
+
+# Calcuate the product, display as a vector
+as.vector(t(v) %*% m %*% v)
+
+# End Solution
+
+################################################################
 ## Exercise 1.3.8,  Lists
 ################################################################
 
@@ -171,6 +243,8 @@ X[allCrit,]
 #
 # 3) Extract the 2nd element without the elment name
 #
+# 4) Calculate the length of each element of the list and
+#    return the result as a vector
 
 # Solution
 
@@ -188,6 +262,52 @@ myList[c(3, 1)]
 myList[["numVec"]]
 myList$numVec
 
+# Calculate the length of each element, returned as a vector
+unlist(lapply(myList, length))
+
+# End Solution
+
+################################################################
+## Exercise 1.3.9,  Factors
+################################################################
+
+# 1) Create a numeric vector with arbitrarily repeated
+#    values of 1.2, 3, and 7.9 .
+#
+# 2) Create the numeric vector to a factor, where 3 will be
+#    numerically encoded as a 1, 7.9 as a 2, and 1.2 as 3.
+#    Display the numerical encoding
+#
+# 3) Display the levels of the factor
+#
+# 4) Convert the factor back to the original numerical vector
+#
+# 5) Create a subset of the factor when it equals 1.2 or 3
+
+# Solution
+
+# Create a numeric vector
+x <- c(rep(1.2, 3), rep(3, 2), rep(7.9, 4))
+
+# Convert it to a factor with the encoding specified
+xf <- factor(x, levels = c(3, 7.9, 1.2))
+xf
+
+# Display the numerical encoding
+as.numeric(xf)
+
+# Display the levels
+levels(xf)
+
+# Convert the factor object back again to numeric and compare
+xCompare <- as.numeric(levels(xf)[xf])
+identical(xCompare, x)
+
+# Create a subset when the factor is 1.2 or 3.  Both of these
+# produce identical results. In the second instance,
+# R is converts the numeric values of 1.2 and 3 to character.
+xf[xf %in% c("1.2", "3")]
+xf[xf %in% c(1.2, 3)]
 
 # End Solution
 

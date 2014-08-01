@@ -147,6 +147,62 @@ unlink("a_temporary_subset.Rdata")
 #    "more_fake_data.csv".  Use the write.csv() function
 
 
+################################################################
+## Activity 1.4.3,  Installing packages
+################################################################
+
+# Often times, you'll want to use methods or functions in
+# R that are available only through contributed packages that
+# don't come pre-installed with R.  The 'xtable' package is an
+# example of a widely used package that converts data frames
+# and matrices into LaTeX or html tables.
+
+# Prior to installation, let's create a directory where R
+# will install the package. This step is not usually required
+# if you are installing a package on your own computer.
+dir.create("Rlibs")
+
+# To install 'xtable', we use the install.packages() function.
+# The 'libs' argument tells R where to install the package on
+# your computer.  Once again, if you own the computer, this
+# the 'lib' argument is not usually necessary. The "repos"
+# argument allows you to specify a CRAN mirror.  For this
+# example, we'll use the CRAN mirror at Case Western University.
+# If you omit the "repos" argument, R will prompt you with a
+# pop-up window to select a CRAN mirror. Typically, you want
+# to choose a mirror that is geographically close to you.
+install.packages("xtable", lib = "Rlibs",
+                 repos = "http://cran.case.edu")
+
+# Once we have installed the 'xtable' package, we need
+# to load it with library() in order to use it.  Again,
+# we need to tell R where to look for the library, since
+# we installed it to the "Rlibs" directory.  For your
+# own computer, the 'lib.loc' argument is not usually
+# necessary.
+library(xtable, lib.loc = "Rlibs")
+
+# We can get a listing of the functions contained in the
+# 'xtable' package using:
+help(package = xtable)
+
+# All good packages have documentation for their functions.
+# Let's look at the help for the xtable() function
+?xtable
+
+# Suppose we wanted to create an html table for
+# a portion of the mtcars data with the vehicles that have
+# high power and relatively good gas mileage:
+indicator <- (mtcars[,"hp"] > 150) & (mtcars[,"mpg"] > 15)
+mtSub <- mtcars[indicator, c("hp", "mpg")]
+
+# Now create the html table that we can copy and paste to
+# an html editor using xtable() from the 'xtable' package
+mtSub.xtable <- xtable(mtSub)
+print(mtSub.xtable, type = "html")
+
+# We can also render the table for use in a LaTeX document:
+print(mtSub.xtable)
 
 ################################################################
 ## Activity 1.4.4,  Making your own functions
@@ -277,6 +333,76 @@ simp3(3, 7)[[1]]
 y <- simp3(3, 7)
 y[2:3]
 
+# Many R coders do not use the return() function at the end
+# of their function definitions. I prefer to use return() for
+# readability and clarity of the code but, technically, it is
+# redundant.  The last object that is stated at the end of the
+# function is automatically returned, as illustrated here:
+simp4 <- function(x, y) {
+
+    z1 <- x + 7
+    z2 <- z1 * y
+
+    # z2 is returned
+    z2
+
+}
+
+# Call the function
+simp4(3, -2)
+
+# What if the output you return from a function is so large
+# you would never want to have it displayed on the screen?  R
+# has a nice trick for this:  the invisible() function
+simp5 <- function(n) {
+
+  # Make a vector
+  x <- 1:n
+
+  # Write a message that tells you the mean of the vector
+  cat("The mean of the numbers from 1 to", n, "is", mean(x),
+      "\n")
+
+  # Invisibly return the vector
+  invisible(x)
+
+}
+
+# Now, if I call the function without assigning it to an
+# object, the value 'x' is not returned.  Only the cat()
+# statement is printed.
+simp5(100)
+
+# But if I assign it to an object, the vector is returned
+# and assigned to the object.
+y <- simp5(100)
+head(y)
+tail(y)
+
+# Functions can also be defined without arguments.  A common
+# reason to do this might be to wrap a large script into a
+# single unit of code.  This can be especially helpful
+# if you need to write code with control statements (e.g.,
+# if/then/else statements, for/while loops, etc.).  Control
+# statements behave better in R if they are encapsulated
+# within a function.
+simp6 <- function() {
+
+  # Take 1 random draw from a poisson distribution with mean 20
+  aRandomPoissonNumber <- rpois(1, lambda = 20)
+
+  # Create some text to return
+  textToReturn <- paste("A random Poisson variate:",
+                        aRandomPoissonNumber)
+
+  # Return the text string
+  return(textToReturn)
+
+}
+
+# Call it
+simp6()
+simp6()
 
 ################################################################
 ## Exercise 1.4.4,  Making your own functions

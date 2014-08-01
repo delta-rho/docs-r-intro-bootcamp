@@ -1,2 +1,2 @@
-docs-bootcamp
+docs-r-intro-bootcamp
 =============

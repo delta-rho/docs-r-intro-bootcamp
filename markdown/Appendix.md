@@ -27,9 +27,11 @@ If you want to run the code for Activity 1, please download and save these files
 directory on your machine. Then before executing the code in Activity 1, 
 execute the following command in R, substituting the correct directory on your machine.
 (Remember that R uses forward slashes '/' for all paths even on Windows.)
-```{r eval=FALSE, echo=TRUE}
+
+```r
 setwd("c:/put/your/data/directory/here")
 ```
+
 
 Activity 2 (2.2 and 2.3) uses data from the VAST Challenge 2013, which may be found here:
 http://vacommunity.org/VAST+Challenge+2013. Specifically, the NetFlow dataset from

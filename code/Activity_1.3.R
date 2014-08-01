@@ -591,6 +591,7 @@ length(aList)
 
 aNewList <- list(d = "nice", e = 12.7,
                  f = complex(real = 1, imaginary = 7))
+aNewList
 
 
 
@@ -640,5 +641,122 @@ unlist(lapply(aList, is.numeric))
 
 dList <- list(1:10, rep(TRUE, 2), rnorm(3), diag(2))
 dList
+
+
+
+var <- sample(c(rep("animal", 3), rep("plant", 2),
+                rep("non-living", 4)))
+var
+
+
+
+f1 <- factor(var)
+f1
+
+
+
+str(f1)
+
+
+
+summary(f1)
+
+
+
+levels(f1)
+
+
+
+as.numeric(f1)
+
+
+
+data.frame(original = var, numerical.coding = as.numeric(f1))
+
+
+
+f2 <- factor(var, levels = c("plant", "animal", "non-living"))
+
+
+
+data.frame(original = var, numerical.coding = as.numeric(f2))
+
+
+
+f2 == "plant"
+
+
+
+which(f2 == "plant")
+
+
+
+varRestored1 <- as.character(f1)
+identical(var, varRestored1)
+
+
+
+varRestored2 <- as.character(f2)
+identical(var, varRestored2)
+
+
+
+numVar <- rep(4:1, each = 2)
+numVar
+f3 <- factor(numVar)
+f3
+
+
+
+numVarRestored <- as.integer(levels(f3)[f3])
+identical(numVarRestored, numVar)
+
+
+
+f4 <- factor(numVar, levels = 1:4,
+             labels = c("good", "bad", "ugly", "obnoxious"))
+
+
+
+f4
+str(f4)
+data.frame(original = numVar, numerical.coding = as.numeric(f4),
+           labels = as.character(f4))
+
+
+
+f5 <- factor(numVar, levels = c(2, 1, 4, 3),
+             labels = c("good", "bad", "ugly", "obnoxious"))
+f5
+data.frame(original = numVar, numerical.coding = as.numeric(f5),
+           labels = as.character(f5))
+
+
+
+subsetLogical <- f5 == "good"
+subsetIndexes <- which(f5 %in% c("good", "ugly"))
+
+
+
+f5[subsetLogical]
+f5[subsetIndexes]
+
+
+
+x <- rnorm(length(numVar))
+
+
+
+m1 <- lm(x ~ f3)
+
+
+
+coef(m1)
+levels(f3)
+
+
+
+coef(lm(x ~ f4))
+levels(f4)
 
 
