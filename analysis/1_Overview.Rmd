@@ -18,8 +18,8 @@ Activities 1.2-2.1 may be run on your local machine with the following setup:
 ```{r eval=FALSE, echo=TRUE}
 install.packages(c("devtools", "stl"), repos="http://cran.rstudio.com/")
 library(devtools)
-install_github("datadr", "tesseradata")
-install_github("trelliscope", "tesseradata")
+install_github("datadr", "tesseradata", ref = "v0.7.2.5")
+install_github("trelliscope", "tesseradata", ref = "v0.7.7")
 ```
 
 Activities 2.2 and 2.3 are examples of how to use Tessera tools on big data, and 
