@@ -35,9 +35,13 @@ Activity 2 (2.2 and 2.3) uses data from the VAST Challenge 2013, which may be fo
 http://vacommunity.org/VAST+Challenge+2013. Specifically, the NetFlow dataset from
 Mini-Challenge 3 is used.
 
-### Slides ###
+### Slides and Handouts ###
 
-Download the slides presented at the bootcamp.
+Download the slides and handouts presented at the bootcamp.
 
 - [Morning Session](slides/Tessera_Bootcamp_Morning_Session_Web.pdf)
 - [Afternoon Session](slides/Tessera_Bootcamp_Afternoon_Session_Web.pdf)
+- [R Quick Start Guide](slides/Quick_Start_Guide_R.pdf)
+- [RStudio Quick Start Guide](slides/Quick_Start_Guide_RStudio.pdf)
+- [Trelliscope Quick Start Guide](slides/Quick_Start_Guide_Trelliscope.pdf)
+
