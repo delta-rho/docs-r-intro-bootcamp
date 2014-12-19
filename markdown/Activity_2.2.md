@@ -24,7 +24,7 @@ Sys.setenv(TZ = "UTC")
 setwd("~")
 
 # set working directory in HDFS
-hdfs.setwd(""Sys.getenv("HDFS_USER_VAST")"")
+hdfs.setwd(Sys.getenv("HDFS_USER_VAST"))
 ```
 
 

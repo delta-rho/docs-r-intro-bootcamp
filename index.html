@@ -6326,7 +6326,7 @@ Sys.setenv(TZ = &quot;UTC&quot;)
 setwd(&quot;~&quot;)
 
 # set working directory in HDFS
-hdfs.setwd(&quot;&quot;Sys.getenv(&quot;HDFS_USER_VAST&quot;)&quot;&quot;)
+hdfs.setwd(Sys.getenv(&quot;HDFS_USER_VAST&quot;))
 </code></pre>
 
 <pre><code class="r"># make sure raw text data has been copied to HDFS
@@ -7241,8 +7241,15 @@ execute the following command in R, substituting the correct directory on your m
 </code></pre>
 
 <p>Activity 2 (2.2 and 2.3) uses data from the VAST Challenge 2013, which may be found here:
-<a href="http://vacommunity.org/VAST+Challenge+2013">http://vacommunity.org/VAST+Challenge+2013</a>. Specifically, the NetFlow dataset from
-Mini-Challenge 3 is used.</p>
+<a href="http://hcil2.cs.umd.edu/newvarepository/VAST%20Challenge%202013/challenges/MC3%20-%20Big%20Marketing/">
+   http://hcil2.cs.umd.edu/newvarepository/VAST%20Challenge%202013/challenges/MC3%20-%20Big%20Marketing/</a>.</p> 
+
+<p>Download the data, which is in a zipped file. Unzip the data archive, and find the
+file <code>Dataset/Week 2/Week2Data/nf-week2.csv</code>. You will need to copy this file into
+HDFS using the following commands (where you should substitute your username for [user]).</p>
+<pre><code>hadoop fs -mkdir /user/[user]/bootcamp/raw/nf
+hadoop fs -put [unzipped_path]/Dataset/Week\ 2/Week2Data/nf-week2.csv /user/[user]/bootcamp/raw/nf/nf-week2.csv
+</code></pre>
 
 </div>
 

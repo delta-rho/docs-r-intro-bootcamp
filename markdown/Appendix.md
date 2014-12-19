@@ -34,9 +34,15 @@ setwd("c:/put/your/data/directory/here")
 
 
 Activity 2 (2.2 and 2.3) uses data from the VAST Challenge 2013, which may be found here:
-http://vacommunity.org/VAST+Challenge+2013. Specifically, the NetFlow dataset from
-Mini-Challenge 3 is used.
+(http://hcil2.cs.umd.edu/newvarepository/VAST%20Challenge%202013/challenges/MC3%20-%20Big%20Marketing/). 
 
+Download the data, which is in a zipped file. Unzip the data archive, and find the
+file `Dataset/Week 2/Week2Data/nf-week2.csv`. You will need to copy this file into
+HDFS using the following commands (where you should substitute your username for [user]).
+```
+hadoop fs -mkdir /user/[user]/bootcamp/raw/nf
+hadoop fs -put [unzipped_path]/Dataset/Week\ 2/Week2Data/nf-week2.csv /user/[user]/bootcamp/raw/nf/nf-week2.csv
+```
 ### Slides and Handouts ###
 
 Download the slides and handouts presented at the bootcamp.
